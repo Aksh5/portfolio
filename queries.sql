@@ -5,6 +5,7 @@ OrderID INT PRIMARY KEY,
     Customer_ID INT,
     StoreName VARCHAR(50)
 );
+
 -- Inserting Data for 2023
 INSERT INTO Orders (OrderID, OrderDate, Amount, Customer_ID, StoreName) VALUES
 (973, '2023-09-12', 9151, 32, 'BCD'),
