@@ -70,6 +70,8 @@ INSERT INTO Orders (OrderID, OrderDate, Amount, Customer_ID, StoreName) VALUES
 (1989, '2025-10-10', 8100, 34, 'XYZ'),
 (1990, '2025-12-14', 7900, 23, 'ABC');
 
+-- Calculate Sales by Year
+
 select
 StoreName,
 sum(case when year(OrderDate) = 2023 then Amount else 0 end) as Sales_2023,
@@ -78,3 +80,13 @@ sum(case when year (OrderDate) = 2025 then Amount else 0 end) as Sales_2025
 from Orders
 Group by StoreName
 Order by StoreName;
+
+--Calculates Total Spent by Customer 
+
+select  Customer_ID, 
+sum(case when year  (OrderDate) = 2023 then Amount else 0 end) as Total_Spent_2023,
+sum(case when year  (OrderDate) = 2024 then Amount else 0 end) as Total_Spent_2024,
+sum(case when year  (OrderDate) = 2025 then Amount else 0 end) as Total_Spent_2025
+from  Orders
+group by Customer_ID
+Order by Customer_ID;
