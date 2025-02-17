@@ -90,3 +90,29 @@ sum(case when year  (OrderDate) = 2025 then Amount else 0 end) as Total_Spent_20
 from  Orders
 group by Customer_ID
 Order by Customer_ID;
+
+--Calculate Sale for the year 2024
+
+select StoreName,
+sum(Amount) as Total_Sales_2024
+From Orders
+where year(OrderDate) = 2024
+group by StoreName
+Order by Total_Sales_2024 desc;
+
+--Calculate the most Orders
+
+select Customer_ID,
+count(OrderID) as Total_Orders
+from Orders
+group by Customer_ID
+order by Total_Orders desc;
+
+Calculates average spent for 2025
+
+select  Customer_ID,
+avg(Amount) as Avg_Spent_2025
+from Orders
+where year(OrderDate) = 2025
+group by Customer_ID
+order by Avg_Spent_2025 desc;
