@@ -1,0 +1,195 @@
+CREATE SCHEMA dannys_diner;
+SET search_path = dannys_diner;
+
+CREATE TABLE sales (
+  "customer_id" VARCHAR(1),
+  "order_date" DATE,
+  "product_id" INTEGER
+);
+
+INSERT INTO sales
+  ("customer_id", "order_date", "product_id")
+VALUES
+  ('A', '2021-01-01', '1'),
+  ('A', '2021-01-01', '2'),
+  ('A', '2021-01-07', '2'),
+  ('A', '2021-01-10', '3'),
+  ('A', '2021-01-11', '3'),
+  ('A', '2021-01-11', '3'),
+  ('B', '2021-01-01', '2'),
+  ('B', '2021-01-02', '2'),
+  ('B', '2021-01-04', '1'),
+  ('B', '2021-01-11', '1'),
+  ('B', '2021-01-16', '3'),
+  ('B', '2021-02-01', '3'),
+  ('C', '2021-01-01', '3'),
+  ('C', '2021-01-01', '3'),
+  ('C', '2021-01-07', '3');
+ 
+
+CREATE TABLE menu (
+  "product_id" INTEGER,
+  "product_name" VARCHAR(5),
+  "price" INTEGER
+);
+
+INSERT INTO menu
+  ("product_id", "product_name", "price")
+VALUES
+  ('1', 'sushi', '10'),
+  ('2', 'curry', '15'),
+  ('3', 'ramen', '12');
+  
+
+CREATE TABLE members (
+  "customer_id" VARCHAR(1),
+  "join_date" DATE
+);
+
+INSERT INTO members
+  ("customer_id", "join_date")
+VALUES
+  ('A', '2021-01-07'),
+  ('B', '2021-01-09');
+
+Query SQL
+Case Study Questions
+1. What is the total amount each customer spent at the restaurant?
+2. How many days has each customer visited the restaurant?
+3. What was the first item from the menu purchased by each customer?
+4. What is the most purchased item on the menu and how many times was it purchased by all customers?
+5. Which item was the most popular for each customer?
+6. Which item was purchased first by the customer after they became a member?
+7. Which item was purchased just before the customer became a member?
+8. What is the total items and amount spent for each member before they became a member?
+
+
+Query:
+1.
+SELECT s.customer_id, SUM(m.price) AS total_spent
+FROM Sales s
+INNER JOIN Menu m ON s.product_id = m.product_id
+GROUP BY s.customer_id
+ORDER BY s.customer_id;
+
+2.
+SELECT customer_id, COUNT(DISTINCT order_date) AS visited_days
+FROM Sales
+GROUP BY customer_id
+ORDER BY customer_id;
+
+3.
+WITH FirstOrders as 
+(
+  SELECT customer_id, MIN(order_date) as firstorder_date
+ FROM Sales
+ GROUP BY customer_id
+ )
+ SELECT s.customer_id, s.order_date, m.product_name
+ FROM Sales s
+ JOIN FirstOrders f
+ ON s.customer_id = f.customer_id AND s.order_date = f.firstorder_date
+ JOIN Menu m
+ ON s.product_id = m.product_id
+ ORDER BY s.customer_id;
+
+4.
+SELECT m.product_name, COUNT(*) as total_purchased
+FROM Sales s
+JOIN Menu m
+ON s.product_id = m.product_id
+GROUP BY m.product_name
+ORDER BY total_purchased DESC;
+
+5.
+WITH ItemCounts AS (
+  SELECT 
+    s.customer_id, 
+    m.product_name, 
+    COUNT(*) AS times_ordered,
+    ROW_NUMBER() OVER (
+      PARTITION BY s.customer_id 
+      ORDER BY COUNT(*) DESC
+    ) AS rank
+  FROM 
+    Sales s
+  JOIN 
+    Menu m ON s.product_id = m.product_id
+  GROUP BY 
+    s.customer_id, m.product_name
+)
+
+SELECT 
+  customer_id, 
+  product_name AS most_popular_item, 
+  times_ordered
+FROM 
+  ItemCounts
+WHERE 
+  rank = 1
+ORDER BY 
+  customer_id;
+
+6.
+WITH after_membership AS (
+  SELECT 
+    s.customer_id, 
+    s.order_date, 
+    s.product_id,
+    m.join_date
+  FROM Sales s
+  JOIN Members m 
+    ON s.customer_id = m.customer_id
+  WHERE s.order_date >= m.join_date
+),
+first_purchase AS (
+  SELECT *,
+         RANK() OVER (
+           PARTITION BY customer_id 
+           ORDER BY order_date ASC
+         ) AS rnk
+  FROM after_membership
+)
+SELECT 
+  f.customer_id,
+  f.order_date AS first_purchase_date,
+  menu.product_name
+FROM first_purchase f
+JOIN Menu menu 
+  ON f.product_id = menu.product_id
+WHERE rnk = 1
+ORDER BY f.customer_id;
+
+7.
+WITH before_membership AS (
+  SELECT s.customer_id, s.order_date, s.product_id, m.join_date
+  FROM Sales s
+  JOIN Members m ON s.customer_id = m.customer_id
+  WHERE s.order_date < m.join_date
+),
+last_purchase_before_member AS (
+  SELECT *,
+         RANK() OVER (
+           PARTITION BY customer_id 
+           ORDER BY order_date DESC
+         ) AS rnk
+  FROM before_membership
+)
+SELECT b.customer_id, b.order_date AS last_order_before_join,
+       menu.product_name
+FROM last_purchase_before_member b
+JOIN Menu menu ON b.product_id = menu.product_id
+WHERE rnk = 1;
+
+8.
+SELECT 
+  s.customer_id,
+  COUNT(*) AS total_items,
+  SUM(m.price) AS total_amount
+FROM Sales s
+JOIN Members mem ON s.customer_id = mem.customer_id
+JOIN Menu m ON s.product_id = m.product_id
+WHERE s.order_date < mem.join_date
+GROUP BY s.customer_id;
+
+
